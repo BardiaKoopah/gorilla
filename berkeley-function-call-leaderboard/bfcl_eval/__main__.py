@@ -247,6 +247,12 @@ def evaluate(
         help="A list of test categories to run the evaluation on.",
         callback=handle_multiple_input
     ),
+    custom_path: List[str] = typer.Option(
+       None,
+       "--custom-path",
+       callback=handle_multiple_input,
+       help="Path(s) to your custom JSON test file(s) (only used when test_category includes 'custom')",
+    ),
     result_dir: str = typer.Option(
         None,
         "--result-dir",
@@ -263,7 +269,7 @@ def evaluate(
     """
 
     load_dotenv(dotenv_path=DOTENV_PATH, verbose=True, override=True)  # Load the .env file
-    evaluation_main(model, test_category, result_dir, score_dir)
+    evaluation_main(model, test_category, result_dir, score_dir, custom_path)
 
 
 @cli.command()
