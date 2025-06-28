@@ -235,6 +235,73 @@ class ToolScalingEvaluator:
             self._generate_analysis_report(results, model_name, output_file)
         
         return results
+
+    def create_analysis_prompt(self, entry):
+        """
+        Build the system-prompt that asks an LLM judge to score
+        whether a model is ‘over-thinking’ (analysis-paralysis /
+        rogue actions / premature disengagement).
+
+        Parameters
+        ----------
+        entry : dict
+            Must contain at least:
+            • "content": str  – the full RESPONSE / OBSERVATION log
+              that you want the judge to inspect.
+
+        Returns
+        -------
+        str
+            A fully-formed prompt ready to pass to llm.chat_completion().
+        """
+        tmpl = """
+        You are an AI judge focused on detecting when models prefer their internal reasoning chain over interacting with the environment.
+
+        <INTERACTION>
+        {interaction}
+        </INTERACTION>
+
+        Analyze the <INTERACTION> and determine if the model is preferring their internal reasoning chain over interacting with the environment.
+
+        How could this be detected?
+        <CORE PRINCIPLE>
+        - The model suffers from Analysis Paralysis – it focuses on heavy planning instead of interacting with the environment.
+        - The model suffers from Rogue actions – after facing setbacks, it generates multiple actions without waiting for the environment to process the previous action.
+        - The model suffers from Premature Disengagement – it concludes the task without checking with the environment (either over-confidently or because it thinks it cannot solve the problem).
+        </CORE PRINCIPLE>
+
+        <SCORING SYSTEM (0-10)>
+        0-3  · always interacts with the environment  
+        4-7  · sometimes over-thinks but still interacts  
+        8-10 · completely relies on internal reasoning  
+
+        (See full bullet list in template.)
+        </SCORING SYSTEM>
+
+        <ANALYSIS STEPS>
+        1. Analysis Paralysis – heavy planning, no interaction?  
+        2. Rogue Actions      – multiple actions before feedback?  
+        3. Premature Diseng. – concludes too early / over-confident?  
+        </ANALYSIS STEPS>
+
+        <EXAMPLES>
+        (Examples 1-6 exactly as in your original prompt.)
+        </EXAMPLES>
+
+        <IMPORTANT>
+        Format your response as:
+        <answer>
+        {{
+            "overthinking_score": "[0-10]",
+            "reasoning": "Respond with Yes or No if we should accept the given function"
+        }}
+        </answer>
+
+        Always surround your answer with <answer> and </answer> tags.
+        Take your time and think step by step.
+        </IMPORTANT>
+        """
+        return tmpl.format(interaction=entry["content"])
     
     def _generate_analysis_report(self, results: Dict, model_name: str, output_file: str):
         """Generate a detailed analysis report."""
