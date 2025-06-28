@@ -343,7 +343,7 @@ def ast_file_runner(
 
 
 #### Main runner function ####
-def runner(model_names, test_categories, result_dir, score_dir):
+def runner(model_names, all_test_file_paths, all_test_categories, result_dir, score_dir):
 
     # State udpated by each eval subtask.
     state = dict(
@@ -372,8 +372,10 @@ def runner(model_names, test_categories, result_dir, score_dir):
 
         # Find and process all JSON files in the subdirectory
         for model_result_json in subdir.glob("*.json"):
-            test_category = extract_test_category(model_result_json)
-            if test_category not in test_categories:
+            raw_cat = extract_test_category(model_result_json)
+            test_category = "custom" if raw_cat.startswith("custom") else raw_cat
+
+            if test_category not in all_test_categories:
                 continue
 
             handler = get_handler(model_name_escaped)
@@ -392,6 +394,8 @@ def runner(model_names, test_categories, result_dir, score_dir):
                 model_name,
                 handler,
                 state,
+                custom_paths=all_test_file_paths,
+                custom_categories=all_test_categories,
             )
 
     # This function reads all the score files from local folder and updates the
@@ -400,7 +404,7 @@ def runner(model_names, test_categories, result_dir, score_dir):
     update_leaderboard_table_with_local_score_file(state["leaderboard_table"], score_dir)
     # Write the leaderboard table to a file
     generate_leaderboard_csv(
-        state["leaderboard_table"], score_dir, model_names, test_categories
+        state["leaderboard_table"], score_dir, model_names, all_test_categories
     )
 
 
@@ -412,6 +416,8 @@ def evaluate_task(
     model_name,
     handler,
     state,
+    custom_paths=None,
+    custom_categories=None
 ):
 
     language = "Python"
@@ -425,10 +431,21 @@ def evaluate_task(
     record_cost_latency(state["leaderboard_table"], model_name, model_result)
 
     # Find the corresponding test file.
-    prompt_file = find_file_with_suffix(PROMPT_PATH, test_category)
+    if test_category == "custom":
+       # pop off the next custom path
+        prompt_file = Path(custom_paths.pop(0))
+    else:
+        prompt_file = find_file_with_suffix(PROMPT_PATH, test_category)
     prompt = load_file(prompt_file, sort_by_id=True)
 
-    if is_relevance_or_irrelevance(test_category):
+    if test_category == "custom":
+        # for custom, we reuse the same JSON you passed in
+        possible_answer = load_file(prompt_file, sort_by_id=True)
+        accuracy, total_count = relevance_file_runner(
+            handler, model_result, prompt, model_name, test_category, score_dir
+        )
+
+    elif is_relevance_or_irrelevance(test_category):
         accuracy, total_count = relevance_file_runner(
             handler, model_result, prompt, model_name, test_category, score_dir
         )
@@ -468,7 +485,7 @@ def evaluate_task(
     return state
 
 
-def main(model, test_categories, result_dir, score_dir):
+def main(model, test_categories, result_dir, score_dir, custom_path=None):
     if result_dir is None:
         result_dir = RESULT_PATH
     else:
@@ -481,8 +498,12 @@ def main(model, test_categories, result_dir, score_dir):
 
     if type(test_categories) is not list:
         test_categories = [test_categories]
-
-    _, all_test_categories = parse_test_category_argument(test_categories)
+    
+    if "custom" in test_categories and custom_path:
+        all_test_file_paths = custom_path
+        all_test_categories  = ["custom"] * len(custom_path)
+    else:
+        all_test_file_paths, all_test_categories = parse_test_category_argument(test_categories)
 
     model_names = None
     if model:
@@ -496,7 +517,7 @@ def main(model, test_categories, result_dir, score_dir):
             model_names.append(model_name.replace("/", "_"))
 
     # Driver function to run the evaluation for all categories involved.
-    runner(model_names, all_test_categories, result_dir, score_dir)
+    runner(model_names, all_test_file_paths, all_test_categories, result_dir, score_dir)
 
     print(
         f"🏁 Evaluation completed. See {score_dir / 'data_overall.csv'} for overall evaluation results on BFCL V3."
@@ -521,6 +542,12 @@ if __name__ == "__main__":
         help="A list of test categories to run the evaluation on",
     )
     parser.add_argument(
+    "--custom-path",
+    nargs="+",
+    default=None,
+    help="Path(s) to custom JSON test files; only used when --test-category includes 'custom'."
+    )
+    parser.add_argument(
         "--result-dir",
         default=None,
         type=str,
@@ -541,4 +568,5 @@ if __name__ == "__main__":
         args.test_category,
         args.result_dir,
         args.score_dir,
+        args.custom_path,
     )

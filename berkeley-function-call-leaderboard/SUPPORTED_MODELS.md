@@ -98,6 +98,7 @@ For model names containing `{...}`, multiple versions are available. For example
 | o1-2024-12-17                          | Prompt           | OpenAI         | o1-2024-12-17                                               |
 | o3-mini-2025-01-31                     | Function Calling | OpenAI         | o3-mini-2025-01-31-FC                                       |
 | o3-mini-2025-01-31                     | Prompt           | OpenAI         | o3-mini-2025-01-31                                          |
+| o3-2025-04-16                          | Function Calling | OpenAI         | o3-2025-04-16
 | Open-Mistral-Nemo-2407                 | Prompt           | Mistral AI     | open-mistral-nemo-2407                                      |
 | Open-Mistral-Nemo-2407                 | Function Calling | Mistral AI     | open-mistral-nemo-2407-FC                                   |
 | palmyra-x-004                          | Function Calling | Writer         | palmyra-x-004                                               |
