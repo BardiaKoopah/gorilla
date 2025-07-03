@@ -4,7 +4,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from pathlib import Path
-import traceback
 
 from bfcl_eval.constants.category_mapping import (
     MULTI_TURN_FUNC_DOC_FILE_MAPPING,
@@ -220,7 +219,6 @@ def multi_threaded_inference(handler, test_case, include_input_log, exclude_stat
                 return {
                     "id": test_case["id"],
                     "result": f"Error during inference: {str(e)}",
-                    "traceback": traceback.format_exc()
                 }
 
     result_to_write = {
@@ -292,7 +290,6 @@ def main(args):
         all_test_categories,
         all_test_entries_involved,
     ) = get_involved_test_entries(args.test_category, args.run_ids, args.custom_path)
-
     for model_name in args.model:
         if model_name not in MODEL_CONFIG_MAPPING:
             raise ValueError(
@@ -310,7 +307,6 @@ def main(args):
         args.result_dir = PROJECT_ROOT / args.result_dir
     else:
         args.result_dir = RESULT_PATH
-
     for model_name in args.model:
         test_cases_total = collect_test_cases(
             args,
@@ -326,3 +322,4 @@ def main(args):
             )
         else:
             generate_results(args, model_name, test_cases_total)
+            

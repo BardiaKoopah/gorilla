@@ -6,6 +6,13 @@ import subprocess
 from datetime import datetime
 import random
 import argparse
+import logging
+from bfcl_eval.constants.eval_config import (
+    DOTENV_PATH,
+    PROJECT_ROOT,
+    RESULT_PATH,
+    SCORE_PATH,
+)
 
 def int_or_str(x: str):
     try:
@@ -37,58 +44,114 @@ parser.add_argument(
     help='The model you want to use for the benchmark'
 )
 
+parser.add_argument(
+    '--openai-key',
+    required=False,
+    help='The api key for OpenAI models'
+)
+
+parser.add_argument(
+    '--anthropic-key',
+    required=False,
+    help='The api key for Anthropic models'
+)
+
+parser.add_argument(
+    '--amazon-key',
+    nargs='+',
+    required=False,
+    help='The api key for Amazon models'
+)
+
+parser.add_argument(
+    '--deepseek-key',
+    required=False,
+    help='The api key for DeepSeek models'
+)
+
+parser.add_argument(
+    '--gemini-key',
+    required=False,
+    help='The api key for Gemini models'
+)
+
+parser.add_argument(
+    '--qwen-key',
+    required=False,
+    help='The api key for Qwen models'
+)
+
 args = parser.parse_args()
 
 BATCH_SIZE = args.batch_size
-RESULT_FOLDER_PATH = '/Users/bardia/gorilla/berkeley-function-call-leaderboard/result'
-SCORE_FOLDER_PATH = '/Users/bardia/gorilla/berkeley-function-call-leaderboard/score'
-TEMPLATE_PATH = '/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_static_template.json'
+DATA_PATH = os.path.join(PROJECT_ROOT, 'bfcl_eval/data')
+TEMPLATE_PATH = os.path.join(DATA_PATH, 'BFCL_v3_static_template.json')
+POSSIBLE_ANSWER_PATH = os.path.join(DATA_PATH, 'possible_answer')
 TODAYS_DATE = datetime.today().strftime('%Y-%m-%d')
 
 positions = args.ground_truth_pos
 available_models = args.model_name
+
+logger = logging.getLogger(__name__)
+logging.basicConfig(
+    filename='my_benchmark.log',
+    filemode='w',
+    level=logging.DEBUG,
+    format='%(asctime)s [%(levelname)s] %(name)s: %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S'
+    )
+console = logging.StreamHandler()
+console.setLevel(logging.INFO) 
+console.setFormatter(
+    logging.Formatter('%(asctime)s [%(levelname)s] %(name)s: %(message)s', 
+                      datefmt='%Y-%m-%d %H:%M:%S')
+)
+logger.addHandler(console)
+
+
 # 'claude-3-7-sonnet-20250219-FC',
 # 'o3-2025-04-16',
 # 'DeepSeek-R1-0528-FC',
-# 'qwq-32b-FC' : 'sk-a5bb65a48c27445ea2c05e9ae4a599f8', REMOVE THESE MODELS FROM FUTURE RUNS,
+# 'qwq-32b-FC' REMOVE THESE MODELS FROM FUTURE RUNS,
 # 'nova-pro-v1.0'
-# 'gemini-2.5-pro-preview-05-06-FC' : ['bfcl-model-eval', 'us-central1'] REMOVE THESE MODELS FROM FUTURE RUNS
+# 'gemini-2.5-pro-preview-05-06-FC' REMOVE THESE MODELS FROM FUTURE RUNS
+# 'gpt-4o-mini-2024-07-18-FC'
 
 dataset_paths = [
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_irrelevance.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_java.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_javascript.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_live_irrelevance.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_live_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_live_parallel_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_live_parallel.json'),
-    Path('berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_live_relevance.json'),
-    Path('berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_live_simple.json'),
-    # Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_multi_turn_base.json'), NO MULTI TURNS FOR NOW
-    # Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_multi_turn_long_context.json'),
-    # Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_multi_turn_miss_func.json'),
-    # Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_multi_turn_miss_param.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_parallel_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_parallel.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_static_template.json'),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_irrelevance.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_java.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_javascript.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_live_irrelevance.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_live_multiple.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_live_parallel_multiple.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_live_parallel.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_live_relevance.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_live_simple.json')),
+    # Path(os.path.join(DATA_PATH, 'BFCL_v3_multi_turn_base.json'), NO MULTI TURNS FOR NOW
+    # Path(os.path.join(DATA_PATH, 'BFCL_v3_multi_turn_long_context.json'),
+    # Path(os.path.join(DATA_PATH, 'BFCL_v3_multi_turn_miss_func.json'),
+    # Path(os.path.join(DATA_PATH, 'BFCL_v3_multi_turn_miss_param.json'),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_multiple.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_parallel_multiple.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_parallel.json')),
+    Path(os.path.join(DATA_PATH, 'BFCL_v3_static_template.json')),
 ]
 
 answer_paths = [
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_java.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_javascript.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_live_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_live_parallel_multiple.json'),
-    Path('berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_live_parallel.json'),
-    Path('berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_live_simple.json'), #COULD POSSIBLE BE AN ISSUE FOR DUPLICATES. COMMENT OUT IN CASE
-    #Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_multi_turn_base.json'), NO MULTI TURNS FOR NOW
-    #Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_multi_turn_long_context.json'),
-    #Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_multi_turn_miss_func.json'),
-    #Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_multi_turn_miss_param.json'),
-    Path('berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_parallel_multiple.json'),
-    Path('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_parallel.json'),
-    Path('berkeley-function-call-leaderboard/bfcl_eval/data/possible_answer/BFCL_v3_simple.json')
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_java.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_javascript.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_live_multiple.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_live_parallel_multiple.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_live_parallel.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_live_simple.json')), #COULD POSSIBLE BE AN ISSUE FOR DUPLICATES. COMMENT OUT IN CASE
+    #Path(os.path.join(DATA_PATH, 'possible_answer/BFCL_v3_multi_turn_base.json'), NO MULTI TURNS FOR NOW
+    #Path(os.path.join(DATA_PATH, 'possible_answer/BFCL_v3_multi_turn_long_context.json'),
+    #Path(os.path.join(DATA_PATH, 'possible_answer/BFCL_v3_multi_turn_miss_func.json'),
+    #Path(os.path.join(DATA_PATH, 'possible_answer/BFCL_v3_multi_turn_miss_param.json'),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_multiple.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_parallel_multiple.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_parallel.json')),
+    Path(os.path.join(POSSIBLE_ANSWER_PATH, 'BFCL_v3_simple.json'))
 ]
 
 #BELOW IS (GROUND_TRUTH) OF THE POSSIBLE TOOLS
@@ -127,17 +190,19 @@ def noisy_benchmark(size=128, true_position='middle'):
         id = line['id']
         ground_truth_name = t_star[f'{id}']
         
+        ground_truth_func = None  # start clean
         for dic in tool_list:
             name = dic['name']
             if name == ground_truth_name or name.endswith(f".{ground_truth_name}"):
                 ground_truth_func = dic
-        
-        try:
-            ground_truth_func
-        except NameError:
-            raise RuntimeError(
-                f"No tool found for ground truth '{ground_truth_name}' in ID {id}"
-            )
+                break
+
+        """ if not ground_truth_func:
+            print(f"❌ Ground truth function '{ground_truth_name}' not found in tool_list for ID: {id}")
+            continue
+
+        # DEBUG: Print what tool we're inserting
+        print(f"✅ ID {id}: inserting tool '{ground_truth_func['name']}' (ground truth: {ground_truth_name})") """
 
         pool = [f for f in tool_list if f['name'] != ground_truth_name]
         
@@ -162,15 +227,14 @@ def noisy_benchmark(size=128, true_position='middle'):
                 seen.add(f["name"])
                 deduped.append(f)
         line["function"] = deduped
-
     return lines
     
-def load_template(path='/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/BFCL_v3_static_template.json'):
+def load_template(path=os.path.join(DATA_PATH, 'BFCL_v3_static_template.json')):
     with open(path, "r") as f:
         return [json.loads(line) for line in f]
 
 def run_generate(model, result_dir, custom_path):
-    print(f"\n Generating for {model} → {result_dir}")
+    logger.info(f"\n Generating for {model} → {result_dir}")
     cmd = [
         "python", "-m", "bfcl_eval", "generate",
         "--test-category", "custom",
@@ -180,46 +244,68 @@ def run_generate(model, result_dir, custom_path):
         "--allow-overwrite",
         "--temperature", "1",
     ]
+    env = os.environ.copy()
     if model.startswith('nova'):
-        cmd.insert(0, "AWS_SECRET_ACCESS_KEY=mJJQi6nqoRYdA7DL9zqY8fWsZ2/xLwIIq0pvLuvO")
-        cmd.insert(0, "AWS_ACCESS_KEY_ID=AKIA3M7ACZMLM4BFXUCI")
+        env["AWS_SECRET_ACCESS_KEY"] = args.amazon_key[1]
+        env["AWS_ACCESS_KEY_ID"] = args.amazon_key[0]
     elif model.startswith('gemini'):
-        cmd.insert(0, "VERTEX_AI_LOCATION=us-central1")
-        cmd.insert(0, "VERTEX_AI_PROJECT_ID=bfcl-model-eval")
+        env["GEMINI_API_KEY"] = args.gemini_key
     elif model.startswith('o3') or model.startswith('gpt-4o'):
-        cmd.insert(0, "OPENAI_API_KEY=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")
+        env["OPENAI_API_KEY"] = args.openai_key
     elif model.startswith('DeepSeek'):
-        cmd.insert(0, "OPENAI_API_KEY=sk-7bf84cf3889042c9a242f4c00e62b8df")
+        env["DEEPSEEK_API_KEY"] = args.deepseek_key
     elif model.startswith('qwq'):
-        cmd.insert(0, "YOUR_DASHSCOPE_API_KEY=sk-a5bb65a48c27445ea2c05e9ae4a599f8")
+        env["DASHSCOPE_API_KEY"] = args.qwen_key
     elif model.startswith('claude'):
-        cmd.insert(0, "ANTHROPIC_API_KEY=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")
-    cw_dic = '/Users/bardia/gorilla/berkeley-function-call-leaderboard'
-    subprocess.run(" ".join(cmd), shell=True, check=True, cwd=cw_dic)
+        env["ANTHROPIC_API_KEY"] = args.anthropic_key
+    
+    subprocess.run(cmd, check=True, cwd=PROJECT_ROOT, env=env)
 
-def run_evaluate(model, result_dir, eval_dir):
-    print(f"\n Evaluating {model}")
-    cmd = [
-        "python", "-m", 'bfcl_eval', "evaluate",
-        "--model", model,
-        "--result-dir", result_dir,
-        "--score-dir", eval_dir
-    ]
-    cw_dic = '/Users/bardia/gorilla/berkeley-function-call-leaderboard'
-    subprocess.run(cmd, check=True, cwd=cw_dic)
+def run_evaluate(model, result_dir, eval_dir, custom_path):
+    logger.info("")
+    logger.info("Evaluating %s", model)
+    try:
+        cmd = [
+            "python", "-m", 'bfcl_eval', "evaluate",
+            "--model", model,
+            "--custom-path", custom_path,
+            "--test-category", 'custom',
+            "--result-dir", result_dir,
+            "--score-dir", eval_dir
+        ]
+        
+        subprocess.run(cmd, check=True, cwd=PROJECT_ROOT)
+    except Exception as e:
+        logger.error("Something went wrong during evaluation: %s", e)
+
 
 def save_benchmark(lines, path):
     with open(path, "w") as f:
         for line in lines:
             f.write(json.dumps(line) + "\n")
 
+def rename_result(path, model):
+    old_filename = 'BFCL_v3_simple_result.json'
+    new_filename = 'BFCL_v3_custom_result.json'
+
+    old_filepath = path / model / old_filename
+    new_filepath = path / model / new_filename
+
+    try:
+        os.rename(old_filepath, new_filepath)
+        logger.info("File old_filename=%s successfully changed to new_filename=%s", old_filename, new_filename)
+    except Exception as e:
+        logger.info("Something went wrong with the file renaming: %s", e)
+
+
 def runner():
     for model in available_models:
         for position in positions:
             try:
-                print(f"\n=== Starting run for {model} at position {position} ===")
+                logger.info("")
+                logger.info("=== Starting run for %s at position %s ===", model, position)
                 random.seed(42069)
-                custom_template_path = os.path.join('/Users/bardia/gorilla/berkeley-function-call-leaderboard/bfcl_eval/data/', f'BFCL_v3_custom_{position}.json')
+                custom_template_path = os.path.join(DATA_PATH, f'BFCL_v3_custom_{position}.json')
 
                 lines = noisy_benchmark(size=BATCH_SIZE, true_position=position)
                 save_benchmark(lines, custom_template_path)
@@ -229,27 +315,36 @@ def runner():
                     if len(tool_names) != len(set(tool_names)):
                         duplicates = set([name for name in tool_names if tool_names.count(name) > 1])
                         print(f"❗️ Duplicate tools found in ID {line['id']}: {duplicates}")
+                        logger.error(f"❗️ Duplicate tools found in ID {line['id']}: {duplicates}")
                         print(f"🔍 Full tool list for {line['id']}: {tool_names}")
 
-                print(f"CREATED NEW BENCHMARK FOR {model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
-                result_dir = os.path.join(RESULT_FOLDER_PATH, f"{model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
-                eval_dir = os.path.join(SCORE_FOLDER_PATH, f"{model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
+                logger.info("CREATED NEW BENCHMARK FOR %s_%s_%s_%s", model, BATCH_SIZE, position, TODAYS_DATE)
+                result_dir = os.path.join(RESULT_PATH, f"{model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
 
-                print(f"GENERATING RESULTS FOR {model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
-                run_generate(model, result_dir, custom_template_path)
+                logger.info("RESULT DIRECTORY: %s", result_dir)
+                eval_dir = os.path.join(SCORE_PATH, f"{model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
 
-                """ print(f"EVALUATING RESULTS FOR {model}_{BATCH_SIZE}_{position}_{TODAYS_DATE}")
-                run_evaluate(model, result_dir, eval_dir) """
+                model_dir = Path(result_dir) / model  # model subfolder
+                simple_fp = model_dir / "BFCL_v3_simple_result.json"
+                custom_fp = model_dir / "BFCL_v3_custom_result.json"
+
+                if not ( simple_fp.exists() or custom_fp.exists() ):
+                    # no result file found → we need to generate
+                    run_generate(model, result_dir, custom_template_path)
+                    rename_result(result_dir, model)
+                else:
+                    logger.info("Skipping generation for %s at %s: found existing %s", model, position, RESULT_PATH)
+
+                run_evaluate(model, result_dir, eval_dir, custom_template_path)
 
                 """ if os.path.exists(BENCHMARK_PATH):
                     os.remove(BENCHMARK_PATH)
                     print(f" Deleted old benchmark: {BENCHMARK_PATH}") """
 
             except subprocess.CalledProcessError as e:
-                print(f"❌ Error during subprocess for model={model}, position={position}")
-                print(e)
+                logger.error("❌ Error during subprocess for model=%s, position=%s", model, position)
             except Exception as a:
-                print(f"❗ Unexpected error for model={model}, position={position}: {a}")
+                logger.error("❗ Unexpected error for model=%s, position=%s: %s", model, position, a)
 
 if __name__ == "__main__":
     runner()

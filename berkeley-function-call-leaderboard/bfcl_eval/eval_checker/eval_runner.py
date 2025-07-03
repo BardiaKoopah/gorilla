@@ -250,6 +250,9 @@ def ast_file_runner(
     model_name,
     score_dir,
 ):
+    prompt_ids = {entry["id"] for entry in prompt}
+    possible_answer = [pa for pa in possible_answer if pa["id"] in prompt_ids]
+    
     assert (
         len(model_result) == len(prompt) == len(possible_answer)
     ), f"The length of the model result ({len(model_result)}) does not match the length of the prompt ({len(prompt)}) or possible answer ({len(possible_answer)}). Please check the input files for completeness."
@@ -280,7 +283,8 @@ def ast_file_runner(
                 }
             )
             continue
-
+        
+       
         decoder_output_valid = is_function_calling_format_output(model_result_item)
         if not decoder_output_valid:
             result.append(
@@ -434,18 +438,31 @@ def evaluate_task(
     if test_category == "custom":
        # pop off the next custom path
         prompt_file = Path(custom_paths.pop(0))
+        prompt = load_file(prompt_file, sort_by_id=True)
+        # for custom, we reuse the same JSON you passed in
+        custom_answer_file = POSSIBLE_ANSWER_PATH / "BFCL_v3_custom.json"
+        all_possible_answers = load_file(custom_answer_file, sort_by_id=True)
+
+        prompt_ids = {entry["id"] for entry in prompt}
+        possible_answer = [entry for entry in all_possible_answers if entry["id"] in prompt_ids]
+
+        accuracy, total_count = ast_file_runner(
+        handler,
+        model_result,
+        prompt,
+        possible_answer,
+        language,
+        test_category,
+        model_name,
+        score_dir,
+    )
+
     else:
         prompt_file = find_file_with_suffix(PROMPT_PATH, test_category)
     prompt = load_file(prompt_file, sort_by_id=True)
 
-    if test_category == "custom":
-        # for custom, we reuse the same JSON you passed in
-        possible_answer = load_file(prompt_file, sort_by_id=True)
-        accuracy, total_count = relevance_file_runner(
-            handler, model_result, prompt, model_name, test_category, score_dir
-        )
 
-    elif is_relevance_or_irrelevance(test_category):
+    if is_relevance_or_irrelevance(test_category):
         accuracy, total_count = relevance_file_runner(
             handler, model_result, prompt, model_name, test_category, score_dir
         )
@@ -486,6 +503,7 @@ def evaluate_task(
 
 
 def main(model, test_categories, result_dir, score_dir, custom_path=None):
+
     if result_dir is None:
         result_dir = RESULT_PATH
     else:

@@ -265,7 +265,7 @@ api_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
-    "o3-2025-04-16": ModelConfig(
+    "o3-2025-04-16-FC": ModelConfig(
         model_name="o3-2025-04-16",
         display_name="o3-2025-04-16 (FC)",
         url="https://openai.com/index/introducing-o3-and-o4-mini/",
