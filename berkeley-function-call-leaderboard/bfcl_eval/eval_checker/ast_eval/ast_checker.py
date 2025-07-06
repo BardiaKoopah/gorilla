@@ -30,27 +30,57 @@ NESTED_CONVERSION_TYPE_LIST = ["Array", "ArrayList", "array"]
 def ast_checker(
     func_description, model_output, possible_answer, language, test_category, model_name
 ):
-    if "parallel" in test_category:
-        return parallel_function_checker_no_order(
-            func_description, model_output, possible_answer, language, model_name
-        )
+     if "parallel" in test_category:
+         return parallel_function_checker_no_order(
+             func_description, model_output, possible_answer, language, model_name
+         )
         
-    elif "multiple" in test_category:
+     elif "multiple" in test_category:
         return multiple_function_checker(
             func_description, model_output, possible_answer, language, model_name
         )
+     elif test_category == 'custom':
         
-    else:
-        if len(model_output) != 1:
-            return {
-                "valid": False,
-                "error": ["Wrong number of functions."],
-                "error_type": "simple_function_checker:wrong_count",
-            }
+        truth = possible_answer[0]
+        if isinstance(model_output, list):
+            if len(model_output) != 1:
+                return {
+                    "valid": False,
+                    "error": ["Wrong number of functions."],
+                    "error_type": "simple_function_checker:wrong_count",
+                }
+            call_dict = model_output[0]
+        else:
+            call_dict = model_output
+        # scan across all 128 schemas and see if any match the actual call
+        for schema in func_description:
+            result = simple_function_checker(
+                schema,
+                call_dict,  # still the one call the model made
+                truth,         # your ground_truth dict
+                language,
+                model_name
+            )
+            if result["valid"]:
+                return result
 
-        return simple_function_checker(
-            func_description[0], model_output[0], possible_answer[0], language, model_name
-        )
+        # nothing matched
+        return {
+            "valid": False,
+            "error": ["No valid function call found among the 128 candidates."],
+            "error_type": "simple_function_checker:wrong_position",
+        }
+     else:
+         if len(model_output) != 1:
+             return {
+                 "valid": False,
+                 "error": ["Wrong number of functions."],
+                 "error_type": "simple_function_checker:wrong_count",
+             }
+
+         return simple_function_checker(
+             func_description[0], model_output[0], possible_answer[0], language, model_name
+         )
 
 
 #### Helper functions for AST ####
@@ -341,7 +371,6 @@ def simple_function_checker(
     }
 
     func_name = convert_func_name(func_name, model_name)
-
     # Check if function name matches
     if func_name not in model_output:
         result["valid"] = False

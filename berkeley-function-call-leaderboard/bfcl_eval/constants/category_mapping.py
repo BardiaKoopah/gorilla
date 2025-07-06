@@ -34,6 +34,24 @@ TEST_FILE_MAPPING = {
     "multi_turn_miss_param": f"{VERSION_PREFIX}_multi_turn_miss_param.json",
     "multi_turn_long_context": f"{VERSION_PREFIX}_multi_turn_long_context.json",
     # "multi_turn_composite": f"{VERSION_PREFIX}_multi_turn_composite.json",
+
+    # Tool Scaling Test Datasets
+    "simple_tools_1_pos_1": f"{VERSION_PREFIX}_simple_tools_1_pos_1.json",
+    "simple_tools_2_pos_1": f"{VERSION_PREFIX}_simple_tools_2_pos_1.json",
+    "simple_tools_5_pos_1": f"{VERSION_PREFIX}_simple_tools_5_pos_1.json",
+    "simple_tools_10_pos_1": f"{VERSION_PREFIX}_simple_tools_10_pos_1.json",
+    "simple_tools_20_pos_1": f"{VERSION_PREFIX}_simple_tools_20_pos_1.json",
+    "simple_tools_40_pos_1": f"{VERSION_PREFIX}_simple_tools_40_pos_1.json",
+    "simple_tools_80_pos_1": f"{VERSION_PREFIX}_simple_tools_80_pos_1.json",
+    "simple_tools_5_pos_5": f"{VERSION_PREFIX}_simple_tools_5_pos_5.json",
+    "simple_tools_10_pos_5": f"{VERSION_PREFIX}_simple_tools_10_pos_5.json",
+    "simple_tools_20_pos_5": f"{VERSION_PREFIX}_simple_tools_20_pos_5.json",
+    "simple_tools_40_pos_5": f"{VERSION_PREFIX}_simple_tools_40_pos_5.json",
+    "simple_tools_80_pos_5": f"{VERSION_PREFIX}_simple_tools_80_pos_5.json",
+    "simple_tools_20_pos_20": f"{VERSION_PREFIX}_simple_tools_20_pos_20.json",
+    "simple_tools_40_pos_20": f"{VERSION_PREFIX}_simple_tools_40_pos_20.json",
+    "simple_tools_80_pos_20": f"{VERSION_PREFIX}_simple_tools_80_pos_20.json",
+    "simple_tools_80_pos_50": f"{VERSION_PREFIX}_simple_tools_80_pos_50.json",
 }
 
 TEST_COLLECTION_MAPPING = {
@@ -130,6 +148,24 @@ TEST_COLLECTION_MAPPING = {
         "live_parallel_multiple",
         "live_irrelevance",
         "live_relevance",
+    ],
+    "tool_scaling": [
+        "simple_tools_1_pos_1",
+        "simple_tools_2_pos_1",
+        "simple_tools_5_pos_1",
+        "simple_tools_10_pos_1",
+        "simple_tools_20_pos_1",
+        "simple_tools_40_pos_1",
+        "simple_tools_80_pos_1",
+        "simple_tools_5_pos_5",
+        "simple_tools_10_pos_5",
+        "simple_tools_20_pos_5",
+        "simple_tools_40_pos_5",
+        "simple_tools_80_pos_5",
+        "simple_tools_20_pos_20",
+        "simple_tools_40_pos_20",
+        "simple_tools_80_pos_20",
+        "simple_tools_80_pos_50",
     ],
 }
 

@@ -665,7 +665,6 @@ class BaseHandler:
 
         if isinstance(result, dict):
             result = [result]
-
         # Collect and format each entry for JSON compatibility
         entries_to_write = [make_json_serializable(entry) for entry in result]
 

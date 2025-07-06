@@ -265,6 +265,18 @@ api_inference_model_map = {
         is_fc_model=False,
         underscore_to_dot=False,
     ),
+    "o3-2025-04-16-FC": ModelConfig(
+        model_name="o3-2025-04-16",
+        display_name="o3-2025-04-16 (FC)",
+        url="https://openai.com/index/introducing-o3-and-o4-mini/",
+        org="OpenAI",
+        license="Proprietary",
+        model_handler=OpenAIHandler,
+        input_price=2,
+        output_price=8,
+        is_fc_model=True,
+        underscore_to_dot=True
+    ),
     "o3-mini-2025-01-31-FC": ModelConfig(
         model_name="o3-mini-2025-01-31-FC",
         display_name="o3-mini-2025-01-31 (FC)",

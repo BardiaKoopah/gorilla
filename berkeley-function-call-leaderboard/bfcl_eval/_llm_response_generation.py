@@ -4,7 +4,6 @@ import time
 from concurrent.futures import ThreadPoolExecutor
 from copy import deepcopy
 from pathlib import Path
-import traceback
 
 from bfcl_eval.constants.category_mapping import (
     MULTI_TURN_FUNC_DOC_FILE_MAPPING,
@@ -94,23 +93,20 @@ def get_involved_test_entries(test_category_args, run_ids, custom_path=None):
             all_test_categories.append(category)
             all_test_file_paths.append(test_file_path)
     else:
-        if custom_path is not None:
-            all_test_file_paths = custom_path
-            _, all_test_categories = parse_test_category_argument(test_category_args)
-            for test_category, file_to_open in zip(
-                all_test_categories[:], all_test_file_paths[:]
-            ):
-                all_test_entries_involved.extend(load_file(PROMPT_PATH / file_to_open))
-
+        # --- begin custom-path support ---
+        if "custom" in test_category_args and custom_path:
+            # use exactly the JSON(s) the user passed
+            all_test_file_paths  = custom_path
+            all_test_categories  = ["custom"] * len(custom_path)
+            for file_to_open in all_test_file_paths:
+                # custom_path entries are full paths
+                all_test_entries_involved.extend(load_file(Path(file_to_open)))
         else:
+            # fallback to built-in categories like "simple", "java", …
             all_test_file_paths, all_test_categories = parse_test_category_argument(test_category_args)
-            print("BOOOOOM", all_test_file_paths)
-            print("DICKKKKKK", all_test_categories)
-            # Make a copy here since we are removing list elemenets inside the for loop
-            for test_category, file_to_open in zip(
-                all_test_categories[:], all_test_file_paths[:]
-            ):
+            for test_category, file_to_open in zip(all_test_categories, all_test_file_paths):
                 all_test_entries_involved.extend(load_file(PROMPT_PATH / file_to_open))
+        # --- end custom-path support ---
 
     return (
         all_test_file_paths,
@@ -223,7 +219,6 @@ def multi_threaded_inference(handler, test_case, include_input_log, exclude_stat
                 return {
                     "id": test_case["id"],
                     "result": f"Error during inference: {str(e)}",
-                    "traceback": traceback.format_exc()
                 }
 
     result_to_write = {
@@ -295,7 +290,6 @@ def main(args):
         all_test_categories,
         all_test_entries_involved,
     ) = get_involved_test_entries(args.test_category, args.run_ids, args.custom_path)
-
     for model_name in args.model:
         if model_name not in MODEL_CONFIG_MAPPING:
             raise ValueError(
@@ -313,7 +307,6 @@ def main(args):
         args.result_dir = PROJECT_ROOT / args.result_dir
     else:
         args.result_dir = RESULT_PATH
-
     for model_name in args.model:
         test_cases_total = collect_test_cases(
             args,
@@ -329,3 +322,4 @@ def main(args):
             )
         else:
             generate_results(args, model_name, test_cases_total)
+            
